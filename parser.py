@@ -15,7 +15,8 @@ res = {}
 params_regexp = re.compile(r'.*\d+/\d+ 🍗\d+% 🔋\d+/\d+ 👣(\d+)+км(.*)')
 
 skip_line_anchors = 'Найдено', 'Ты ранен', 'Потеряно', 'Проебано', 'Ты потерял', 'будет проводиться 👊Рейд', \
-                    '/help', 'Ты можешь продолжить путь в Темной зоне', 'Найден дрон'
+                    '/help', 'Ты можешь продолжить путь в Темной зоне', 'Найден дрон', 'Ты заработал', \
+                    'Ты покидаешь Темную зону'
 
 skip_block_anchors = 'Ты тоже хлам собираешь', 'Твой путь преградил', 'Проводник', 'Старьёвщик', \
                      'Хламосборщик', 'Таинственный незнакомец', 'Во время вылазки на тебя напал', \
@@ -37,6 +38,8 @@ def check_skipped(l, type_='line'):
 
 
 for user in os.listdir(DIRECTORY_WITH_LOGS):
+    if user == 'platonoff':
+        continue
     print(user)
     user_dir = os.path.join(DIRECTORY_WITH_LOGS, user)
     for name in os.listdir(user_dir):
@@ -145,3 +148,7 @@ for data in res.values():
 
 with open(RESULT_FILE_NAME, 'w', encoding='utf8') as f:
     json.dump(res, f, indent=2, ensure_ascii=False)
+
+with open('text.txt', 'w', encoding='utf8') as f:
+    for index, key in enumerate(res, 1):
+        f.write('{}. {}\n\n'.format(index, key))
