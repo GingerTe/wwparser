@@ -174,3 +174,5 @@ fabric.properties
 
 data
 *.sqlite
+logging*
+*.xlsx
