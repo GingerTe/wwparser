@@ -31,8 +31,8 @@ class Data(Base):
 @listens_for(Data, 'before_insert')
 def do_stuff(mapper, connect, target: Data):
     # target is an instance of Table
-    target.bonus = json.dumps(target.bonus, ensure_ascii=False, indent=2)
-    target.received = json.dumps(target.received, ensure_ascii=False, indent=2)
+    target.bonus = "; ".join(target.bonus) or None
+    target.received = "; ".join(target.received) or None
 
 
 # Создание таблицы
