@@ -1,6 +1,5 @@
 # coding: utf-8
 import datetime
-import json
 import os
 import re
 import yaml
@@ -20,6 +19,13 @@ with open('logging.yaml', 'rt') as f:
 logging.config.dictConfig(config)
 logger = logging.getLogger(__name__)
 logger.info("Contest is starting")
+
+location_dict = {
+    'Гимназия': 'Школа',
+    'Склад фуража': 'Супермаркет',
+    'Дом ростовщика': 'Банк',
+    'Полевая жандармерия': 'Полицейский участок'
+}
 
 
 class Parser:
@@ -146,8 +152,8 @@ class Parser:
             data.zone = 'safe'
             if data.location.startswith('🚷'):
                 data.zone = 'dark'
-                data.location = data.location[2:]
-
+                data.location = data.location[2:].strip()
+            data.location = location_dict.get(data.location, data.location)
             self.session.add(data)
         self.session.commit()
 
