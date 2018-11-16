@@ -3,14 +3,23 @@ import datetime
 import json
 import os
 import re
+import yaml
 
 from sqlalchemy.orm import sessionmaker
 
 from engine import engine
 from model import Data
 import lxml.html as html
+import logging.config
 
 DATE_FORMAT = '%d.%m.%Y %H:%M:%S'
+
+with open('logging.yaml', 'rt') as f:
+    config = yaml.safe_load(f.read())
+    f.close()
+logging.config.dictConfig(config)
+logger = logging.getLogger(__name__)
+logger.info("Contest is starting")
 
 
 class Parser:
@@ -56,7 +65,8 @@ class Parser:
         self.session.query(Data).delete()
         self.session.commit()
         for user in os.listdir(self.log_dir):
-            print(user)
+            logger.info(user)
+            # print(user)
             user_dir = os.path.join(self.log_dir, user)
             for name in os.listdir(user_dir):
                 if not name.endswith('.html'):
