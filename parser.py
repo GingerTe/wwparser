@@ -167,6 +167,9 @@ class Parser:
             msg_date = datetime.datetime.strptime(date_string, DATE_FORMAT)
         return msg_date
 
+    def __del__(self):
+        self.session.close()
+
 
 if __name__ == '__main__':
     Parser().parse_all()
