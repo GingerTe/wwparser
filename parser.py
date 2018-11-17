@@ -7,7 +7,7 @@ import yaml
 from sqlalchemy.orm import sessionmaker
 
 from engine import engine
-from model import Data, Drop
+from model import Data, Drop, DropType, Type
 import lxml.html as html
 import logging.config
 
@@ -39,6 +39,24 @@ drop_dict = {
     ':': '',
     '📦': 'Маты '
 }
+
+food_list = tuple((
+    'Абрик*с', 'Абсент', 'Булочка', 'Бурбон', 'Винт', 'Виски', 'Вяленое мясо', 'Глюконавт',
+    'Гнилое мясо', 'Гнилой апельсин', 'Голубь', 'Консервы', 'Конфета', 'Красная слизь', 'Крахмал',
+    'Луковица', 'Ментаты', 'Молоко брамина', 'Морковь', 'Мутафрукт', 'Мясо белки', 'Мясо утки',
+    'Не красная слизь', 'Помидор', 'Психо', 'Психонавт', 'Радсмурф', 'Сахарные бомбы', 'Собачатина',
+    'Сухари', 'Сухофрукты', 'Сырое мясо', 'Тесто в мясе', 'Ультравинт', 'Холодное пиво', 'Хомячок',
+    'Человечина', 'Чипсы', 'Что-то тухлое', 'Эдыгейский сыр'
+))
+
+metals = tuple((
+    'β-Ti3Au', 'Кубонит', 'Осмий', 'Иридиий', 'Кипарит'
+))
+
+other = tuple((
+    '👝Сумка под медпаки', '👕Кожаный жилет', '🔬Чертеж улучшения', '🌡Герпес', '💋Поцелуй для героя',
+    '💥Лазерный тесак', '🔳Гиперкуб', '💳Ключ-карта'
+))
 
 
 class Parser:
@@ -214,12 +232,12 @@ def drop_formatter():
     session.commit()
 
     for data in session.query(Data).all():
-        for attr in ('received', 'bonus'):
+        for attr in (DropType.RECEIVED, DropType.BONUS):
             if data.__getattribute__(attr):
                 data_drop = data.__getattribute__(attr)
                 for r in data_drop.split('; '):
                     dropped = r.split()
-                    drop = Drop(data_id=data.id, type=attr)
+                    drop = Drop(data_id=data.id, drop_type=attr)
                     drop_txt = []
                     for d in dropped:
                         if d[0].isdigit():
@@ -227,6 +245,17 @@ def drop_formatter():
                         else:
                             drop_txt.append(d)
                     drop.txt = ' '.join(drop_txt)
+
+                    if drop.txt in food_list:
+                        drop.type = Type.FOOD
+                    elif drop.txt in metals:
+                        drop.type = Type.METAL
+                    elif drop.txt == 'Маты':
+                        drop.type = Type.MATS
+                    elif drop.txt in other:
+                        drop.type = Type.OTHER
+                    else:
+                        drop.type = Type.TRUNK
 
                     session.add(drop)
     session.commit()
