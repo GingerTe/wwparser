@@ -29,7 +29,7 @@ class Drop(Base):
     __tablename__ = 'drop'
     id = Column(Integer, primary_key=True)
     type = Column(String, index=True)
-    text = Column(String, index=True)
+    txt = Column(String, index=True)
     num = Column(Integer, default=1)
     data_id = Column(Integer, ForeignKey('data.id'))
 

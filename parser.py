@@ -219,13 +219,14 @@ def drop_formatter():
                 data_drop = data.__getattribute__(attr)
                 for r in data_drop.split('; '):
                     dropped = r.split()
-                    drop = Drop(data_id=data.id, text=[], type=attr)
+                    drop = Drop(data_id=data.id, type=attr)
+                    drop_txt = []
                     for d in dropped:
                         if d[0].isdigit():
                             drop.num = int(d)
                         else:
-                            drop.text.append(d)
-                    drop.text = ' '.join(drop.text)
+                            drop_txt.append(d)
+                    drop.txt = ' '.join(drop_txt)
 
                     session.add(drop)
     session.commit()
@@ -233,5 +234,5 @@ def drop_formatter():
 
 
 if __name__ == '__main__':
-    Parser().parse_all()
+    # Parser().parse_all()
     drop_formatter()
