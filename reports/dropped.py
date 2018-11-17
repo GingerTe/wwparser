@@ -11,7 +11,7 @@ session = Session()
 received = set()
 bonus = set()
 
-for drop in session.query(Drop).distinct(Drop.txt, Drop.type).all():
+for drop in session.query(Drop).distinct(Drop.txt, Drop.drop_type).all():
     if drop.txt.startswith('📦'):
         continue
     locals()[drop.type].add(drop.txt)
