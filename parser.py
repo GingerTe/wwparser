@@ -210,16 +210,23 @@ def drop_formatter():
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
+    session.query(Drop).delete()
+    session.commit()
 
     for data in session.query(Data).all():
         for attr in ('received', 'bonus'):
             if data.__getattribute__(attr):
                 data_drop = data.__getattribute__(attr)
                 for r in data_drop.split('; '):
-                    match = re.match('([^0-9]+)([0-9]+)?', r)
-                    drop = Drop(data_id=data.id, text=match.group(1), type=attr)
-                    if match.group(2):
-                        drop.num = int(match.group(2))
+                    dropped = r.split()
+                    drop = Drop(data_id=data.id, text=[], type=attr)
+                    for d in dropped:
+                        if d[0].isdigit():
+                            drop.num = int(d)
+                        else:
+                            drop.text.append(d)
+                    drop.text = ' '.join(drop.text)
+
                     session.add(drop)
     session.commit()
     session.close()
