@@ -1,6 +1,6 @@
 import json
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.declarative import declarative_base
 from engine import engine
@@ -24,8 +24,14 @@ class Data(Base):
         for attr in kwargs:
             self.__setattr__(attr, kwargs.get(attr))
 
-    # def __repr__(self):
-    #     return "<Data('%s','%s', '%s')>" % (self.name, self.fullname, self.password)
+
+class Drop(Base):
+    __tablename__ = 'drop'
+    id = Column(Integer, primary_key=True)
+    type = Column(String, index=True)
+    text = Column(String, index=True)
+    num = Column(Integer, default=1)
+    data_id = Column(Integer, ForeignKey('data.id'))
 
 
 @listens_for(Data, 'before_insert')

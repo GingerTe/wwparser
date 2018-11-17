@@ -7,7 +7,7 @@ import yaml
 from sqlalchemy.orm import sessionmaker
 
 from engine import engine
-from model import Data
+from model import Data, Drop
 import lxml.html as html
 import logging.config
 
@@ -25,6 +25,19 @@ location_dict = {
     'Склад фуража': 'Супермаркет',
     'Дом ростовщика': 'Банк',
     'Полевая жандармерия': 'Полицейский участок'
+}
+
+drop_dict = {
+    '🔩': 'Иридий',
+    '💾': 'Микрочип',
+    '💡': 'Генератор',
+    '🔗': '',
+    '🔹': 'Кварц',
+    '🕳': 'Крышки',
+    '+': ' ',
+    'x': ' ',
+    ':': '',
+    '📦': 'Маты '
 }
 
 
@@ -52,6 +65,9 @@ class Parser:
         session.configure(bind=engine)
         self.session = session()
 
+        self.session.query(Data).delete()
+        self.session.commit()
+
     def _fix_br(self):
         for br in self.doc.xpath("*//br"):
             br.tail = "\n" + br.tail if br.tail else "\n"
@@ -68,94 +84,107 @@ class Parser:
         return False
 
     def parse_all(self):
-        self.session.query(Data).delete()
-        self.session.commit()
         for user in os.listdir(self.log_dir):
-            logger.info(user)
-            # print(user)
-            user_dir = os.path.join(self.log_dir, user)
-            for name in os.listdir(user_dir):
-                if not name.endswith('.html'):
-                    continue
-                self.parse(os.path.join(user_dir, name), user)
+            self.parse_user(user)
 
-    def parse(self, file_name, user):
-        with open(file_name, encoding='utf8') as f:
-            data = f.read()
-        self.doc = html.document_fromstring(data)
+    def parse_user(self, user):
+        logger.info(user)
+        user_dir = os.path.join(self.log_dir, user)
+        for name in os.listdir(user_dir):
+            self._parse_document(user, os.path.join(user_dir, name))
+
+    def _parse_document(self, user, file_name):
+        if not file_name.endswith('.html'):
+            return
+
+        with open(file_name, encoding='utf8') as file_doc:
+            self.doc = html.document_fromstring(file_doc.read())
         self._fix_br()
         body = self.doc.find_class('body')
 
         for block in body:
-            msg_date = self._get_date(block)
-
-            msg = self._get_msg(block)
-
-            if not (msg_date and msg):
-                continue
-            data = Data(user=user, date=msg_date)
-
-            content = msg.text_content().strip().split('\n')
-
-            data.txt = []
-            data.received = []
-            data.bonus = []
-            f_skip_block = False
-
-            for index, self.current_line in enumerate(content):
-                self.current_line = self.current_line.strip()
-                if not self.current_line:
-                    continue
-                # Первая строка - локация
-                elif not data.location:
-                    data.location = self.current_line
-                # Если строка параметров
-                elif self.PARAMS_REGEXP.match(self.current_line):
-                    km = self.PARAMS_REGEXP.match(self.current_line).group(1)
-                    if not km:
-                        break
-                    data.km = int(km)
-                # Если получили локацию, дальше должен идти км
-                # Дополнительно проверяем, не является ли блок пропускаемым
-                elif data.location and not data.km or self.check_skipped('all'):
-                    f_skip_block = True
-                    break
-                # Проверка, не нужно ли пропустить строку
-                elif self.check_skipped('line'):
-                    continue
-                # Обработка полученного хлама
-                elif self.current_line.startswith('Получено'):
-                    s = self.current_line.split(':')
-                    data.received.append(s[1].strip())
-                    # if len(s) > 1:
-                    #     num = ''.join(i for i in line if i.isdigit())
-                    #     get[-1]['num'] = int(num) if num else 1
-                # Обработка полученных бонусов
-                elif self.current_line.startswith('Бонус'):
-                    self.current_line = self.current_line[7:]
-                    if '❤' in self.current_line:
-                        continue
-                    else:
-                        data.bonus.append(self.current_line)
-
-                else:
-                    data.txt.append(self.current_line)
-            # Если получили флаг пропустить блок, или не получили км, или не получили текстовку
-            if f_skip_block or not (data.km and data.txt):
-                continue
-            data.txt = ' '.join(data.txt)
-
-            # Убираем владельца локации
-            if '(' in data.location:
-                data.location = data.location[:data.location.index('(')]
-            # Определяем зону
-            data.zone = 'safe'
-            if data.location.startswith('🚷'):
-                data.zone = 'dark'
-                data.location = data.location[2:].strip()
-            data.location = location_dict.get(data.location, data.location)
-            self.session.add(data)
+            self._parse_block(user, block)
         self.session.commit()
+
+    def _parse_block(self, user, block):
+        msg_date = self._get_date(block)
+
+        msg = self._get_msg(block)
+
+        if not (msg_date and msg):
+            return
+        data = Data(user=user, date=msg_date, zone='safe')
+        data.txt = []
+        data.received = []
+        data.bonus = []
+
+        content = msg.text_content().strip().split('\n')
+
+        for index, self.current_line in enumerate(content):
+            self.current_line = self.current_line.strip()
+            if not self.current_line:
+                continue
+            # Первая строка - локация
+            elif not data.location:
+                self._format_location_and_zone(data)
+            # Если строка параметров
+            elif self.PARAMS_REGEXP.match(self.current_line):
+                self._format_km(data)
+            # Если получили локацию, дальше должен идти км
+            # Дополнительно проверяем, не является ли блок пропускаемым
+            elif (data.location and not data.km) or self.check_skipped('all'):
+                return
+            # Проверка, не нужно ли пропустить строку
+            elif self.check_skipped('line'):
+                continue
+            # Обработка полученного хлама
+            elif self.current_line.startswith('Получено'):
+                self._format_drop(data)
+            # Обработка полученных бонусов
+            elif self.current_line.startswith('Бонус'):
+                self._format_bonus(data)
+            else:
+                data.txt.append(self.current_line)
+        # Если получили флаг пропустить блок, или не получили км, или не получили текстовку
+        if not (data.km and data.txt):
+            return
+        data.txt = ' '.join(data.txt)
+
+        self.session.add(data)
+
+    def _format_km(self, data):
+        km = self.PARAMS_REGEXP.match(self.current_line).group(1)
+        data.km = int(km)
+
+    def _format_drop(self, data):
+        self.current_line = self.current_line[len('Получено'):]
+        self._got_formatter()
+        data.received.append(self.current_line)
+
+    def _got_formatter(self):
+        for key in drop_dict:
+            self.current_line = self.current_line.replace(key, drop_dict[key])
+        self.current_line = self.current_line.strip()
+        self.current_line = re.sub(' +', ' ', self.current_line)
+
+    def _format_bonus(self, data):
+        self.current_line = self.current_line[len('Бонус'):]
+        if '❤' in self.current_line:
+            return
+        else:
+            self._got_formatter()
+            data.bonus.append(self.current_line)
+
+    def _format_location_and_zone(self, data):
+        data.location = self.current_line
+        # Убираем владельца локации
+        if '(' in data.location:
+            data.location = data.location[:data.location.index('(')]
+        # Определяем зону
+        if data.location.startswith('🚷'):
+            data.zone = 'dark'
+            data.location = data.location[2:].strip()
+        data.location = location_dict.get(data.location, data.location)
 
     @staticmethod
     def _get_msg(block):
@@ -177,5 +206,25 @@ class Parser:
         self.session.close()
 
 
+def drop_formatter():
+    Session = sessionmaker()
+    Session.configure(bind=engine)
+    session = Session()
+
+    for data in session.query(Data).all():
+        for attr in ('received', 'bonus'):
+            if data.__getattribute__(attr):
+                data_drop = data.__getattribute__(attr)
+                for r in data_drop.split('; '):
+                    match = re.match('([^0-9]+)([0-9]+)?', r)
+                    drop = Drop(data_id=data.id, text=match.group(1), type=attr)
+                    if match.group(2):
+                        drop.num = int(match.group(2))
+                    session.add(drop)
+    session.commit()
+    session.close()
+
+
 if __name__ == '__main__':
     Parser().parse_all()
+    drop_formatter()
