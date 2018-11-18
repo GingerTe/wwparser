@@ -1,4 +1,3 @@
-import json
 
 from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.event import listens_for
@@ -39,6 +38,20 @@ class Drop(Base):
 
     def __repr__(self):
         return self.txt
+
+
+class DungeonDrop(Base):
+    __tablename__ = 'dungeon_drop'
+    id = Column(Integer, primary_key=True)
+    type = Column(String, index=True)
+    txt = Column(String, index=True)
+    num = Column(Integer, default=1)
+    km = Column(Integer, index=True)
+    forward_id = Column(Integer)
+    location_name = Column(String)
+
+    def __repr__(self):
+        return 'Dungeon Drop <{}{}>'.format(self.km, self.txt)
 
 
 class DropType:

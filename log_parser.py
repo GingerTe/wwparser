@@ -37,12 +37,14 @@ drop_dict = {
     '+': ' ',
     'x': ' ',
     ':': '',
-    '📦': 'Маты '
+    '📦': 'Маты ',
+    '🔥': '',
+    '🍸': ''
 }
 
 food_list = tuple((
     'Абрик*с', 'Абсент', 'Булочка', 'Бурбон', 'Винт', 'Виски', 'Вяленое мясо', 'Глюконавт',
-    'Гнилое мясо', 'Гнилой апельсин', 'Голубь', 'Консервы', 'Конфета', 'Красная слизь', 'Крахмал',
+    'Гнилое мясо', 'Гнилой апельсин', 'Голубь', 'Консервы', 'Конфета', 'Красная слизь',
     'Луковица', 'Ментаты', 'Молоко брамина', 'Морковь', 'Мутафрукт', 'Мясо белки', 'Мясо утки',
     'Не красная слизь', 'Помидор', 'Психо', 'Психонавт', 'Радсмурф', 'Сахарные бомбы', 'Собачатина',
     'Сухари', 'Сухофрукты', 'Сырое мясо', 'Тесто в мясе', 'Ультравинт', 'Холодное пиво', 'Хомячок',
@@ -83,9 +85,6 @@ class Parser:
         session.configure(bind=engine)
         self.session = session()
 
-        self.session.query(Data).delete()
-        self.session.commit()
-
     def _fix_br(self):
         for br in self.doc.xpath("*//br"):
             br.tail = "\n" + br.tail if br.tail else "\n"
@@ -102,14 +101,17 @@ class Parser:
         return False
 
     def parse_all(self):
+        self.session.query(Data).delete()
+        self.session.commit()
         for user in os.listdir(self.log_dir):
             self.parse_user(user)
 
     def parse_user(self, user):
-        logger.info(user)
         user_dir = os.path.join(self.log_dir, user)
-        for name in os.listdir(user_dir):
-            self._parse_document(user, os.path.join(user_dir, name))
+        if os.path.isdir(user_dir):
+            logger.info(user)
+            for name in os.listdir(user_dir):
+                self._parse_document(user, os.path.join(user_dir, name))
 
     def _parse_document(self, user, file_name):
         if not file_name.endswith('.html'):
@@ -202,7 +204,7 @@ class Parser:
         if data.location.startswith('🚷'):
             data.zone = 'dark'
             data.location = data.location[2:].strip()
-        data.location = location_dict.get(data.location, data.location)
+        data.location = location_dict.get(data.location, data.location).strip()
 
     @staticmethod
     def _get_msg(block):
@@ -221,47 +223,42 @@ class Parser:
         return msg_date
 
     def __del__(self):
+        self.drop_formatter()
         self.session.close()
 
+    def drop_formatter(self):
+        self.session.query(Drop).delete()
+        self.session.commit()
 
-def drop_formatter():
-    Session = sessionmaker()
-    Session.configure(bind=engine)
-    session = Session()
-    session.query(Drop).delete()
-    session.commit()
+        for data in self.session.query(Data).all():
+            for attr in (DropType.RECEIVED, DropType.BONUS):
+                if data.__getattribute__(attr):
+                    data_drop = data.__getattribute__(attr)
+                    for r in data_drop.split('; '):
+                        dropped = r.split()
+                        drop = Drop(data_id=data.id, drop_type=attr)
+                        drop_txt = []
+                        for d in dropped:
+                            if d[0].isdigit():
+                                drop.num = int(d)
+                            else:
+                                drop_txt.append(d)
+                        drop.txt = ' '.join(drop_txt)
 
-    for data in session.query(Data).all():
-        for attr in (DropType.RECEIVED, DropType.BONUS):
-            if data.__getattribute__(attr):
-                data_drop = data.__getattribute__(attr)
-                for r in data_drop.split('; '):
-                    dropped = r.split()
-                    drop = Drop(data_id=data.id, drop_type=attr)
-                    drop_txt = []
-                    for d in dropped:
-                        if d[0].isdigit():
-                            drop.num = int(d)
+                        if drop.txt in food_list:
+                            drop.type = Type.FOOD
+                        elif drop.txt in metals:
+                            drop.type = Type.METAL
+                        elif drop.txt == 'Маты':
+                            drop.type = Type.MATS
+                        elif drop.txt in other:
+                            drop.type = Type.OTHER
                         else:
-                            drop_txt.append(d)
-                    drop.txt = ' '.join(drop_txt)
+                            drop.type = Type.TRUNK
 
-                    if drop.txt in food_list:
-                        drop.type = Type.FOOD
-                    elif drop.txt in metals:
-                        drop.type = Type.METAL
-                    elif drop.txt == 'Маты':
-                        drop.type = Type.MATS
-                    elif drop.txt in other:
-                        drop.type = Type.OTHER
-                    else:
-                        drop.type = Type.TRUNK
-
-                    session.add(drop)
-    session.commit()
-    session.close()
+                            self.session.add(drop)
+        self.session.commit()
 
 
 if __name__ == '__main__':
-    # Parser().parse_all()
-    drop_formatter()
+    Parser().parse_all()
