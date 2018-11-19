@@ -26,7 +26,7 @@ res = {}
 
 for data in session.query(Data).filter(Data.date > date(2018, 9, 19)).all():
     if data.txt not in res:
-        res[data.txt] = OrderedDict.fromkeys(range(100), 0)
+        res[data.txt] = OrderedDict.fromkeys(range(120), 0)
     res[data.txt][data.km] += 1
 
 for key in sorted(res):
@@ -48,7 +48,7 @@ for index, row in enumerate(sheet.rows):
 tab = Table(displayName="Table1", ref="A1:{}{}".format(get_column_letter(MAX_KM), index + 1))
 
 # Add a default style with striped rows and banded columns
-style = TableStyleInfo(name="TableStyleMedium9", showFirstColumn=False,
+style = TableStyleInfo(name="TableStyleLight16", showFirstColumn=False,
                        showLastColumn=False, showRowStripes=True, showColumnStripes=True)
 tab.tableStyleInfo = style
 sheet.add_table(tab)

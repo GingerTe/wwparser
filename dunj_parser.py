@@ -4,6 +4,7 @@ import json
 from sqlalchemy.orm import sessionmaker
 
 import log_parser
+import params
 from engine import engine
 from model import DungeonDrop, Type
 
@@ -62,13 +63,13 @@ for location, data in dungs.items():
                     drop_txt.append(d)
             drop.txt = ' '.join(drop_txt)
 
-            if drop.txt in log_parser.food_list:
+            if drop.txt in params.FOOD_LIST:
                 drop.type = Type.FOOD
-            elif drop.txt in log_parser.metals:
+            elif drop.txt in params.METAL_LIST:
                 drop.type = Type.METAL
             elif drop.txt == 'Маты':
                 drop.type = Type.MATS
-            elif drop.txt in log_parser.other:
+            elif drop.txt in params.OTHER_LIST:
                 drop.type = Type.OTHER
             else:
                 drop.type = Type.TRUNK

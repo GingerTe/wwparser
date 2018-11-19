@@ -14,7 +14,7 @@ bonus = set()
 for drop in session.query(Drop).distinct(Drop.txt, Drop.drop_type).all():
     if drop.txt.startswith('📦'):
         continue
-    locals()[drop.type].add(drop.txt)
+    locals()[drop.drop_type].add(drop.txt)
 
 with open('all received.txt', 'w', encoding='utf8') as f:
     for r in sorted(list(received)):

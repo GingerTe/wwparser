@@ -11,6 +11,8 @@ from model import Data, Drop, DropType, Type
 import lxml.html as html
 import logging.config
 
+import params
+
 DATE_FORMAT = '%d.%m.%Y %H:%M:%S'
 
 with open('logging.yaml', 'rt') as f:
@@ -19,46 +21,6 @@ with open('logging.yaml', 'rt') as f:
 logging.config.dictConfig(config)
 logger = logging.getLogger(__name__)
 logger.info("Contest is starting")
-
-location_dict = {
-    'Гимназия': 'Школа',
-    'Склад фуража': 'Супермаркет',
-    'Дом ростовщика': 'Банк',
-    'Полевая жандармерия': 'Полицейский участок'
-}
-
-drop_dict = {
-    '🔩': 'Иридий',
-    '💾': 'Микрочип',
-    '💡': 'Генератор',
-    '🔗': '',
-    '🔹': 'Кварц',
-    '🕳': 'Крышки',
-    '+': ' ',
-    'x': ' ',
-    ':': '',
-    '📦': 'Маты ',
-    '🔥': '',
-    '🍸': ''
-}
-
-food_list = tuple((
-    'Абрик*с', 'Абсент', 'Булочка', 'Бурбон', 'Винт', 'Виски', 'Вяленое мясо', 'Глюконавт',
-    'Гнилое мясо', 'Гнилой апельсин', 'Голубь', 'Консервы', 'Конфета', 'Красная слизь',
-    'Луковица', 'Ментаты', 'Молоко брамина', 'Морковь', 'Мутафрукт', 'Мясо белки', 'Мясо утки',
-    'Не красная слизь', 'Помидор', 'Психо', 'Психонавт', 'Радсмурф', 'Сахарные бомбы', 'Собачатина',
-    'Сухари', 'Сухофрукты', 'Сырое мясо', 'Тесто в мясе', 'Ультравинт', 'Холодное пиво', 'Хомячок',
-    'Человечина', 'Чипсы', 'Что-то тухлое', 'Эдыгейский сыр'
-))
-
-metals = tuple((
-    'β-Ti3Au', 'Кубонит', 'Осмий', 'Иридиий', 'Кипарит'
-))
-
-other = tuple((
-    '👝Сумка под медпаки', '👕Кожаный жилет', '🔬Чертеж улучшения', '🌡Герпес', '💋Поцелуй для героя',
-    '💥Лазерный тесак', '🔳Гиперкуб', '💳Ключ-карта'
-))
 
 
 class Parser:
@@ -182,8 +144,8 @@ class Parser:
         data.received.append(self.current_line)
 
     def _got_formatter(self):
-        for key in drop_dict:
-            self.current_line = self.current_line.replace(key, drop_dict[key])
+        for key in params.DROP_NAMES:
+            self.current_line = self.current_line.replace(key, params.DROP_NAMES[key])
         self.current_line = self.current_line.strip()
         self.current_line = re.sub(' +', ' ', self.current_line)
 
@@ -204,7 +166,7 @@ class Parser:
         if data.location.startswith('🚷'):
             data.zone = 'dark'
             data.location = data.location[2:].strip()
-        data.location = location_dict.get(data.location, data.location).strip()
+        data.location = params.EVENT_LOCATION_REL.get(data.location, data.location).strip()
 
     @staticmethod
     def _get_msg(block):
@@ -245,13 +207,13 @@ class Parser:
                                 drop_txt.append(d)
                         drop.txt = ' '.join(drop_txt)
 
-                        if drop.txt in food_list:
+                        if drop.txt in params.FOOD_LIST:
                             drop.type = Type.FOOD
-                        elif drop.txt in metals:
+                        elif drop.txt in params.METAL_LIST:
                             drop.type = Type.METAL
                         elif drop.txt == 'Маты':
                             drop.type = Type.MATS
-                        elif drop.txt in other:
+                        elif drop.txt in params.OTHER_LIST:
                             drop.type = Type.OTHER
                         else:
                             drop.type = Type.TRUNK
