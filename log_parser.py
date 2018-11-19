@@ -24,7 +24,41 @@ logger = logging.getLogger(__name__)
 logger.info("Contest is starting")
 
 
-class Parser:
+class DropFormatter:
+    def __init__(self):
+        self.current_line = ''
+
+    def get_drop(self):
+        for key in params.DROP_NAMES:
+            self.current_line = self.current_line.replace(key, params.DROP_NAMES[key])
+        self.current_line = self.current_line.strip()
+        self.current_line = re.sub(' +', ' ', self.current_line)
+
+        dropped = self.current_line.split()
+        drop = Drop()
+        drop_txt = []
+        for d in dropped:
+            if d[0].isdigit():
+                drop.num = int(d)
+            else:
+                drop_txt.append(d)
+        drop.txt = ' '.join(drop_txt)
+
+        if drop.txt in params.FOOD_LIST:
+            drop.type = Type.FOOD
+        elif drop.txt in params.METAL_LIST:
+            drop.type = Type.METAL
+        elif drop.txt == 'Маты':
+            drop.type = Type.MATS
+        elif drop.txt in params.OTHER_LIST:
+            drop.type = Type.OTHER
+        else:
+            drop.type = Type.TRUNK
+
+        return drop
+
+
+class Parser(DropFormatter):
     SKIP_LINE_ANCHORS = 'Найдено', 'Ты ранен', 'Потеряно', 'Проебано', 'Ты потерял', 'будет проводиться 👊Рейд', \
                         '/help', 'Ты можешь продолжить путь в Темной зоне', 'Найден дрон', 'Ты заработал', \
                         'Ты покидаешь Темную зону', 'Тебе удалось избежать схватки, используя такое модное ' \
@@ -40,8 +74,8 @@ class Parser:
     PARAMS_REGEXP = re.compile(r'.*\d+/\d+ 🍗\d+% 🔋\d+/\d+ 👣(\d+)+км(.*)')
 
     def __init__(self, log_dir='data'):
+        super(Parser, self).__init__()
         self.log_dir = log_dir
-        self.current_line = ''
         self.doc = None
 
         session = sessionmaker()
@@ -106,8 +140,6 @@ class Parser:
             return
         data = Data(user=user, date=msg_date, zone='safe')
         txt = []
-        data.received = []
-        data.bonus = []
 
         content = msg.text_content().strip().split('\n')
 
@@ -130,7 +162,7 @@ class Parser:
                 continue
             # Обработка полученного хлама
             elif self.current_line.startswith('Получено'):
-                self._format_drop(data)
+                self._format_received(data)
             # Обработка полученных бонусов
             elif self.current_line.startswith('Бонус'):
                 self._format_bonus(data)
@@ -148,24 +180,20 @@ class Parser:
         km = self.PARAMS_REGEXP.match(self.current_line).group(1)
         data.km = int(km)
 
-    def _format_drop(self, data):
+    def _format_received(self, data):
         self.current_line = self.current_line[len('Получено'):]
-        self._got_formatter()
-        data.received.append(self.current_line)
-
-    def _got_formatter(self):
-        for key in params.DROP_NAMES:
-            self.current_line = self.current_line.replace(key, params.DROP_NAMES[key])
-        self.current_line = self.current_line.strip()
-        self.current_line = re.sub(' +', ' ', self.current_line)
+        drop = self.get_drop()
+        drop.drop_type = DropType.RECEIVED
+        data.drop.append(drop)
 
     def _format_bonus(self, data):
         self.current_line = self.current_line[len('Бонус'):]
         if '❤' in self.current_line:
             return
-        else:
-            self._got_formatter()
-            data.bonus.append(self.current_line)
+
+        drop = self.get_drop()
+        drop.drop_type = DropType.BONUS
+        data.drop.append(drop)
 
     def _format_location_and_zone(self, data):
         data.location = self.current_line
@@ -195,41 +223,7 @@ class Parser:
         return msg_date
 
     def __del__(self):
-        self.drop_formatter()
         self.session.close()
-
-    def drop_formatter(self):
-        self.session.query(Drop).delete()
-        self.session.commit()
-
-        for data in self.session.query(Data).all():
-            for attr in (DropType.RECEIVED, DropType.BONUS):
-                if data.__getattribute__(attr):
-                    data_drop = data.__getattribute__(attr)
-                    for r in data_drop.split('; '):
-                        dropped = r.split()
-                        drop = Drop(data_id=data.id, drop_type=attr)
-                        drop_txt = []
-                        for d in dropped:
-                            if d[0].isdigit():
-                                drop.num = int(d)
-                            else:
-                                drop_txt.append(d)
-                        drop.txt = ' '.join(drop_txt)
-
-                        if drop.txt in params.FOOD_LIST:
-                            drop.type = Type.FOOD
-                        elif drop.txt in params.METAL_LIST:
-                            drop.type = Type.METAL
-                        elif drop.txt == 'Маты':
-                            drop.type = Type.MATS
-                        elif drop.txt in params.OTHER_LIST:
-                            drop.type = Type.OTHER
-                        else:
-                            drop.type = Type.TRUNK
-
-                            self.session.add(drop)
-        self.session.commit()
 
 
 if __name__ == '__main__':

@@ -23,8 +23,8 @@ class Data(Base):
     txt = relationship("Txt")
     location = Column(String, index=True)
     km = Column(Integer, index=True)
-    received = Column(Text)
-    bonus = Column(Text)
+    # received = Column(Text)
+    # bonus = Column(Text)
     zone = Column(String)
     drop = relationship("Drop", backref="data")
 
@@ -73,11 +73,11 @@ class Type:
     OTHER = 'other'
 
 
-@listens_for(Data, 'before_insert')
-def do_stuff(mapper, connect, target: Data):
-    # target is an instance of Table
-    target.bonus = "; ".join(target.bonus) or None
-    target.received = "; ".join(target.received) or None
+# @listens_for(Data, 'before_insert')
+# def do_stuff(mapper, connect, target: Data):
+#     # target is an instance of Table
+#     target.bonus = "; ".join(target.bonus) or None
+#     target.received = "; ".join(target.received) or None
 
 
 # Создание таблицы
