@@ -25,9 +25,9 @@ sheet.append(['Текст/км'] + [str(x) for x in km])
 res = {}
 
 for data in session.query(Data).filter(Data.date > date(2018, 9, 19)).all():
-    if data.txt not in res:
-        res[data.txt] = OrderedDict.fromkeys(range(120), 0)
-    res[data.txt][data.km] += 1
+    if data.txt.txt not in res:
+        res[data.txt.txt] = OrderedDict.fromkeys(range(120), 0)
+    res[data.txt.txt][data.km] += 1
 
 for key in sorted(res):
     sheet.append([key] + list(res[key].values()))

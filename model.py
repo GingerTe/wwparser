@@ -1,4 +1,3 @@
-
 from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.declarative import declarative_base
@@ -9,12 +8,19 @@ from engine import engine
 Base = declarative_base()
 
 
+class Txt(Base):
+    __tablename__ = 'txt'
+    id = Column(Integer, primary_key=True)
+    txt = Column(String, index=True)
+
+
 class Data(Base):
     __tablename__ = 'data'
     id = Column(Integer, primary_key=True)
     date = Column(DateTime)
     user = Column(String, index=True)
-    txt = Column(Text, index=True)
+    txt_id = Column(Integer, ForeignKey('txt.id'))
+    txt = relationship("Txt")
     location = Column(String, index=True)
     km = Column(Integer, index=True)
     received = Column(Text)

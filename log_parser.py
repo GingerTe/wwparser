@@ -7,11 +7,12 @@ import yaml
 from sqlalchemy.orm import sessionmaker
 
 from engine import engine
-from model import Data, Drop, DropType, Type
+from model import Data, Drop, DropType, Type, Txt
 import lxml.html as html
 import logging.config
 
 import params
+from params import TXT_DICT_RELATION, TXT_DICT_TO_INSERT
 
 DATE_FORMAT = '%d.%m.%Y %H:%M:%S'
 
@@ -46,6 +47,14 @@ class Parser:
         session = sessionmaker()
         session.configure(bind=engine)
         self.session = session()
+        self._txt_creation()
+
+    def _txt_creation(self):
+        logger.info('fill txt table')
+        if not self.session.query(Txt).count():
+            for el in TXT_DICT_TO_INSERT:
+                self.session.add(Txt(id=TXT_DICT_TO_INSERT[el], txt=el))
+        self.session.commit()
 
     def _fix_br(self):
         for br in self.doc.xpath("*//br"):
@@ -96,7 +105,7 @@ class Parser:
         if not (msg_date and msg):
             return
         data = Data(user=user, date=msg_date, zone='safe')
-        data.txt = []
+        txt = []
         data.received = []
         data.bonus = []
 
@@ -126,11 +135,12 @@ class Parser:
             elif self.current_line.startswith('Бонус'):
                 self._format_bonus(data)
             else:
-                data.txt.append(self.current_line)
+                txt.append(self.current_line)
         # Если получили флаг пропустить блок, или не получили км, или не получили текстовку
-        if not (data.km and data.txt):
+        if not (data.km and txt):
             return
-        data.txt = ' '.join(data.txt)
+        txt = ' '.join(txt)
+        data.txt_id = TXT_DICT_RELATION[txt]
 
         self.session.add(data)
 
