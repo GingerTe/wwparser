@@ -226,5 +226,7 @@ class Parser(DropFormatter):
         self.session.close()
 
 
+logger.info("finish")
+
 if __name__ == '__main__':
     Parser().parse_all()
