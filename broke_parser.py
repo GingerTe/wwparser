@@ -25,9 +25,6 @@ class Parser:
         for name in os.listdir(self.dir):
             self._parse_document(os.path.join(self.dir, name))
 
-        print(f'за {self.fights} боев дезом сделано {self.kick} ударов')
-        print(f'{self.pvp} пвп {self.mobs} мобов')
-
     def _parse_document(self, file_name):
         if not file_name.endswith('.html'):
             return
@@ -37,7 +34,10 @@ class Parser:
         body = self.doc.find_class('body')
 
         for block in body:
-            self._parse_block(block)
+            try:
+                self._parse_block(block)
+            except:
+                break
 
     def _parse_block(self, block):
         msg_date = self._get_date(block)
@@ -56,8 +56,8 @@ class Parser:
                 self.is_des = False
                 print(f'{self.weapon} снят')
 
-        if 'Сломано' in content and ('%s' % self.weapon) in content:
-            exit()
+        if 'Сломано' in content and self.weapon in content:
+            raise Exception()
 
         if self.is_des:
             self.find_fight(content)
@@ -88,6 +88,10 @@ class Parser:
             date_string = date_element[0].attrib['title']
             msg_date = datetime.datetime.strptime(date_string, DATE_FORMAT)
         return msg_date
+
+    def __del__(self):
+        print(f'за {self.fights} боев {self.weapon}ом сделано {self.kick} ударов')
+        print(f'{self.pvp} пвп {self.mobs} мобов')
 
 
 if __name__ == '__main__':
