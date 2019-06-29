@@ -1,18 +1,12 @@
 # coding: utf-8
-import datetime
-import os
-
-import lxml.html as html
 
 from common import Parser
-
-DATE_FORMAT = '%d.%m.%Y %H:%M:%S'
 
 
 class FightParser(Parser):
 
-    def __init__(self):
-        super(FightParser, self).__init__('Wolчара ВХ', 'data/me')
+    def __init__(self, user, dir_):
+        super(FightParser, self).__init__(user, dir_)
         self.doc = None
 
         self.pvp = 0
@@ -28,11 +22,9 @@ class FightParser(Parser):
 
     def _parse_block(self, block):
 
-        msg = self._get_msg(block)
-        if not msg:
+        content = self._get_msg(block)
+        if not content:
             return
-
-        content = msg.text_content()
 
         if 'FIGHT!' in content:
             self.get_fight(content)
@@ -53,4 +45,4 @@ class FightParser(Parser):
 
 
 if __name__ == '__main__':
-    FightParser().parse()
+    FightParser('Wolчара ВХ', 'data/me').parse()

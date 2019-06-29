@@ -25,19 +25,30 @@ class Parser:
             br.tail = "\n" + br.tail if br.tail else "\n"
 
     def parse(self, ):
-        for name in os.listdir(self.dir):
+        for name in self._get_html_files():
             self._parse_document(os.path.join(self.dir, name))
 
-    def _parse_document(self, file_name):
-        if not file_name.endswith('.html'):
-            return
+    def _get_html_files(self):
+        res = []
+        for file_name in os.listdir(self.dir):
+            if file_name.endswith('.html'):
+                res.append(file_name)
 
+        res.sort(key=lambda x: int(''.join([y for y in x if y.isdigit()]) if ''.join([y for y in x if y.isdigit()]) else '0'))
+        return res
+
+    def _parse_document(self, file_name):
         with open(file_name, encoding='utf8') as file_doc:
             self.doc = html.document_fromstring(file_doc.read())
-        body = self.doc.find_class('text')
+        body = self.doc.find_class('body')
+
+        self._fix_br()
 
         for block in body:
-            self._parse_block(block)
+            try:
+                self._parse_block(block)
+            except:
+                break
 
     def _parse_block(self, block):
         raise NotImplementedError
@@ -62,7 +73,7 @@ class Parser:
         msg = block.find_class('text')
         if msg:
             msg = msg[0]
-            return msg
+            return msg.text_content().strip()
 
     @staticmethod
     def _get_date(block):
