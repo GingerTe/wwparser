@@ -5,7 +5,7 @@ from common import Parser
 
 class BrokeParser(Parser):
 
-    def __init__(self, user, dir_):
+    def __init__(self, user, dir_, weapon='Дезинтегратор'):
         super(BrokeParser, self).__init__(user, dir_)
         self.doc = None
         self.is_des = False
@@ -13,7 +13,7 @@ class BrokeParser(Parser):
         self.fights = 0
         self.pvp = 0
         self.mobs = 0
-        self.weapon = 'Дезинтегратор'
+        self.weapon = weapon
 
     def _parse_block(self, block):
         msg_date = self._get_date(block)

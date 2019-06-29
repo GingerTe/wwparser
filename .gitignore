@@ -173,6 +173,7 @@ fabric.properties
 .idea/httpRequests
 
 data
+reports
 *.sqlite
 logging*
 *.xlsx
