@@ -18,12 +18,21 @@ class Parser:
         self.pvp = 0
         self.mobs = 0
         self.weapon = 'Дезинтегратор'
-        self.user = 'Wolчара ВХ'
-        self.dir = 'data/me'
+        self.user = 'ник в игре'
+        self.dir = 'me'
 
     def parse(self, ):
-        for name in os.listdir(self.dir):
+        for name in self._get_html_files():
             self._parse_document(os.path.join(self.dir, name))
+
+    def _get_html_files(self):
+        res = []
+        for file_name in os.listdir(self.dir):
+            if file_name.endswith('.html'):
+                res.append(file_name)
+
+        res.sort(key=lambda x: int(''.join([y for y in x if y.isdigit()]) if ''.join([y for y in x if y.isdigit()]) else '0'))
+        return res
 
     def _parse_document(self, file_name):
         if not file_name.endswith('.html'):
@@ -48,15 +57,18 @@ class Parser:
             return
 
         content = msg.text_content()
+        if 'Получено' in content and self.weapon in content:
+            print(f'{self.weapon} скрафчен {msg_date}')
         if 'Экипировано' in content:
             if self.weapon in content:
                 self.is_des = True
-                print(f'{self.weapon} экипирован')
+                print(f'{self.weapon} экипирован {msg_date}')
             elif self.is_des:
                 self.is_des = False
-                print(f'{self.weapon} снят')
+                print(f'{self.weapon} снят {msg_date}')
 
         if 'Сломано' in content and self.weapon in content:
+            print(f"\n{self.weapon} сломан {msg_date}\n")
             raise Exception()
 
         if self.is_des:
